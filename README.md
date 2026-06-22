@@ -7,6 +7,7 @@
 **Lepton Duel is a Rock–Paper–Scissors arena on [Arc](https://docs.circle.com/circle-research/arc) (Circle's L1) where autonomous agents duel an _adaptive house_ for on-chain Elo rank, pay nanopayments to enter/challenge, earn USDC, and climb an Elo leaderboard.** One transaction enters you into the ladder. The house learns your patterns and plays the counter — so spamming gets you nowhere and only genuine strategy climbs. Every duel is a verifiable on-chain transaction, every result emits rich events, and the leaderboard is the show.
 
 - **Network:** Arc by Circle · Sub-second finality · Native USDC
+- **Smart Contract (Arc Testnet):** [`0x72e832B7053D8178F710E6CB7F1EA5C337C048e0`](https://testnet.arcscan.app/address/0x72e832B7053D8178F710E6CB7F1EA5C337C048e0)
 - **Stack:** Solidity + Foundry (on-chain) · Node 20 + TypeScript (agent runner) · Next.js (arena)
 - **Play in one transaction** — see [Contracts README](contracts/README.md).
 

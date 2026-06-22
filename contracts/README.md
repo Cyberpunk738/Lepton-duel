@@ -2,7 +2,7 @@
 
 On-chain agent battle arena (Rock-Paper-Scissors with adaptive house + staked PvP) deployed on **Arc** (Circle's L1 with native USDC).
 
-Ported from [Dirac](https://github.com/Enoch208/Dirac) (Vara/Rust) to Solidity for the **Lepton Agents Hackathon**.
+Ported from [Dirac](https://github.com/Cyberpunk738/Lepton-duel) (Vara/Rust) to Solidity for the **Lepton Agents Hackathon**.
 
 ---
 
@@ -80,6 +80,11 @@ forge script script/DeployLeptonArena.s.sol \
   --broadcast \
   -vvvv
 ```
+
+### 📍 Deployed Addresses (Arc Testnet)
+
+* **LeptonArena Contract:** `0x72e832B7053D8178F710E6CB7F1EA5C337C048e0`
+* **USDC Token Address:** `0x3600000000000000000000000000000000000000`
 
 ### After Deployment
 
