@@ -295,6 +295,7 @@ function useWeb3WalletInternal() {
     }
     setLoading(true);
     try {
+      const cleanOpponent = ethers.getAddress(opponent.trim().toLowerCase());
       const provider = new ethers.BrowserProvider(window.ethereum as any);
       const signer = await provider.getSigner();
       
@@ -315,7 +316,7 @@ function useWeb3WalletInternal() {
 
       // 3. Send Challenge
       const arenaContract = new ethers.Contract(CONTRACT_ADDRESS, ARENA_ABI, signer);
-      const tx = await arenaContract.challenge(opponent, commit, rawStake);
+      const tx = await arenaContract.challenge(cleanOpponent, commit, rawStake);
       const receipt = await tx.wait();
 
       // Find matchId from event log
@@ -339,7 +340,7 @@ function useWeb3WalletInternal() {
 
       // Store in localStorage
       localStorage.setItem(`lepton_pvp_match_${matchId}`, JSON.stringify({
-        opponent,
+        opponent: cleanOpponent,
         move,
         salt,
         stakeAmount,
