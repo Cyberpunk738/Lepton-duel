@@ -1,0 +1,21 @@
+[Unit]
+Description=Dirac runner — Vara agent (events to Chat/Board, rate refresh, mention replies)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=dirac
+WorkingDirectory=/opt/dirac/runner
+ExecStart=/usr/bin/env npm start
+Restart=always
+RestartSec=5
+StartLimitIntervalSec=0
+Environment=NODE_ENV=production
+Environment=VARA_WALLET=/usr/local/bin/vara-wallet
+EnvironmentFile=-/opt/dirac/runner/.env
+StandardOutput=append:/var/log/dirac-runner.log
+StandardError=append:/var/log/dirac-runner.log
+
+[Install]
+WantedBy=multi-user.target
