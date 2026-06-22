@@ -65,7 +65,9 @@ export const SITE = {
 const REPO_URL = "https://github.com/Cyberpunk738/Lepton-duel";
 const ARC_DOCS_URL = "https://docs.circle.com/circle-research/arc";
 const CIRCLE_URL = "https://www.circle.com";
-export const CONTRACT_ADDRESS = "0x72e832B7053D8178F710E6CB7F1EA5C337C048e0"; // TODO: replace after deploy
+export const CONTRACT_ADDRESS = "0x72e832B7053D8178F710E6CB7F1EA5C337C048e0";
+export const USDC_ADDRESS = "0x3600000000000000000000000000000000000000";
+export const RPC_URL = "https://rpc.testnet.arc.network";
 
 export const PRIMARY_CTA: CallToAction = {
   label: "Enter the arena",

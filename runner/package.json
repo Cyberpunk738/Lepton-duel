@@ -6,7 +6,9 @@
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "start": "tsx src/index.ts"
+    "start": "tsx src/index.ts",
+    "start:evm": "tsx src/evm-index.ts",
+    "start:agent": "tsx src/agent.ts"
   },
   "devDependencies": {
     "@types/node": "^22.19.19",
@@ -17,6 +19,8 @@
   "dependencies": {
     "@polkadot/keyring": "^14.0.3",
     "@polkadot/util": "^14.0.3",
-    "@polkadot/util-crypto": "^14.0.3"
+    "@polkadot/util-crypto": "^14.0.3",
+    "dotenv": "^17.4.2",
+    "ethers": "^6.17.0"
   }
 }

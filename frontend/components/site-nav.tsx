@@ -1,8 +1,14 @@
+"use client";
+
 import Link from "next/link";
-import { NAV_LINKS, PRIMARY_CTA, SITE } from "@/lib/content";
-import { CtaButton } from "./cta-button";
+import { NAV_LINKS, SITE } from "@/lib/content";
+import { useWeb3Wallet } from "@/lib/web3";
 
 export function SiteNav() {
+  const { isConnected, address, connect, loading, balance } = useWeb3Wallet();
+
+  const shortAddress = address ? address.slice(0, 6) + "…" + address.slice(-4) : "";
+
   return (
     <header className="fixed inset-x-0 top-4 z-50 flex justify-center px-4">
       <nav className="glass-panel flex items-center gap-1 rounded-full p-1.5 pl-5 backdrop-blur-xl">
@@ -28,12 +34,21 @@ export function SiteNav() {
           ))}
         </ul>
 
-        <CtaButton
-          href={PRIMARY_CTA.href}
-          label={PRIMARY_CTA.label}
-          size="sm"
-          className="ml-2"
-        />
+        {isConnected ? (
+          <div className="ml-2 flex items-center gap-2 rounded-full border border-accent/20 bg-accent/[0.05] px-4 py-2 font-mono text-xs">
+            <span className="text-accent">{balance} USDC</span>
+            <span className="h-3 w-px bg-white/10" />
+            <span className="text-foreground">{shortAddress}</span>
+          </div>
+        ) : (
+          <button
+            onClick={connect}
+            disabled={loading}
+            className="ml-2 rounded-full bg-accent px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-accent-strong disabled:opacity-50 cursor-pointer"
+          >
+            {loading ? "Connecting..." : "Connect Wallet"}
+          </button>
+        )}
       </nav>
     </header>
   );

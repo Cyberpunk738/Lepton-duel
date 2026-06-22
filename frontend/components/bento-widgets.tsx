@@ -1,6 +1,10 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { BENTO, LADDER_PREVIEW } from "@/lib/content";
 import { ArrowRight01Icon, ChampionIcon, Megaphone01Icon } from "@/lib/icons";
+import { fetchOnChainLeaderboard, type OnChainLeaderboardEntry } from "@/lib/web3";
 
 export function HousePredictor() {
   const { bars, predicted, counter } = BENTO.house;
@@ -29,10 +33,31 @@ export function HousePredictor() {
 }
 
 export function LadderPreview() {
+  const [leaderboard, setLeaderboard] = useState<OnChainLeaderboardEntry[]>([]);
+
+  useEffect(() => {
+    fetchOnChainLeaderboard(5).then((data) => {
+      // If the on-chain leaderboard is empty, fallback to the design preview for aesthetics
+      if (data && data.length > 0) {
+        setLeaderboard(data);
+      } else {
+        setLeaderboard(
+          LADDER_PREVIEW.map((row) => ({
+            rank: row.rank,
+            address: row.address,
+            rating: row.rating,
+            delta: row.delta
+          }))
+        );
+      }
+    });
+  }, []);
+
   return (
     <div className="space-y-2">
-      {LADDER_PREVIEW.map((row) => {
+      {leaderboard.map((row) => {
         const up = row.delta.startsWith("+");
+        const hasDelta = row.delta !== "-";
         return (
           <div
             key={row.rank}
@@ -52,9 +77,13 @@ export function LadderPreview() {
             )}
             <span className="flex-1 font-mono text-xs text-muted">{row.address}</span>
             <span className="font-mono text-sm text-foreground">{row.rating}</span>
-            <span className={`font-mono text-xs ${up ? "text-win" : "text-loss"}`}>
-              {row.delta}
-            </span>
+            {hasDelta ? (
+              <span className={`font-mono text-xs ${up ? "text-win" : "text-loss"}`}>
+                {row.delta}
+              </span>
+            ) : (
+              <span className="font-mono text-xs text-faint">—</span>
+            )}
           </div>
         );
       })}

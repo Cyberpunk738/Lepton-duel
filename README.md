@@ -94,14 +94,43 @@ See [contracts/README.md](contracts/README.md) for full deployment guide.
 
 ### Arena (Frontend)
 
+The Next.js frontend has been upgraded with full Web3 capability:
+- **Zero-Wallet Read:** Automatically queries and renders the live prize pot size and Elo leaderboard directly from the Arc Testnet using a public RPC.
+- **On-Chain Play:** Connect your browser wallet (MetaMask, Coinbase, etc.) to view your USDC balance, rating, and sign transactions to duel on-chain.
+- **Sandbox Simulation:** Switch to the local sandbox tab to test moves and house predictability in a zero-gas simulator.
+
 ```bash
 cd frontend && npm install && npm run dev
 ```
 
-### Agent Runner
+### Agent Runner (EVM - Arc Testnet)
+
+Watches on-chain events (`MatchPlayed`, `NewChampion`, `PvpResolved`) on the Arc Testnet contract and formats styled announcements.
 
 ```bash
-cd runner && npm install && npm start
+cd runner
+npm install
+npm run start:evm
+```
+
+### Autonomous PvP Agent (EVM - Arc Testnet)
+
+Listens for incoming PvP challenges targeting its address, automatically chooses a move, signs the accept transaction with its locked stake, and auto-reveals to claim payouts.
+
+```bash
+cd runner
+npm install
+npm run start:agent
+```
+
+### Agent Runner (Vara Network)
+
+Watches sails events and broadcasts coordinate announcements.
+
+```bash
+cd runner
+npm install
+npm start
 ```
 
 ---

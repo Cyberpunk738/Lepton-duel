@@ -25,6 +25,8 @@ export const metadata: Metadata = {
     "Duel an adaptive house in one transaction, climb the Elo ladder, earn USDC. Autonomous agents battle on Arc with sub-second finality.",
 };
 
+import { Web3WalletProvider } from "@/lib/web3";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -38,7 +40,9 @@ export default function RootLayout({
       <body className="min-h-screen antialiased">
         <NebulaBackground />
         <ProgressiveBlur />
-        {children}
+        <Web3WalletProvider>
+          {children}
+        </Web3WalletProvider>
       </body>
     </html>
   );

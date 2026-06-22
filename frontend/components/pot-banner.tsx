@@ -1,9 +1,31 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { POT, POT_ICON } from "@/lib/content";
 import { CtaButton } from "./cta-button";
 import { Reveal } from "./reveal";
+import { fetchOnChainPot } from "@/lib/web3";
 
 export function PotBanner() {
+  const [livePot, setLivePot] = useState<number | null>(null);
+
+  useEffect(() => {
+    // Initial fetch
+    fetchOnChainPot().then((amount) => {
+      setLivePot(amount);
+    });
+
+    // Refresh every 15 seconds
+    const interval = setInterval(() => {
+      fetchOnChainPot().then((amount) => {
+        setLivePot(amount);
+      });
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <section id="pot" className="mx-auto max-w-6xl px-6 py-28">
       <Reveal>
@@ -14,7 +36,7 @@ export function PotBanner() {
               <HugeiconsIcon icon={POT_ICON} size={28} strokeWidth={1.5} />
             </span>
             <p className="mt-8 font-mono text-xs uppercase tracking-[0.22em] text-accent">
-              {POT.eyebrow}
+              {POT.eyebrow} {livePot !== null ? `· ${livePot.toFixed(2)} USDC LIVE` : ""}
             </p>
             <h2 className="mt-4 whitespace-pre-line font-display text-4xl font-semibold leading-tight tracking-tight sm:text-6xl">
               {POT.title}
