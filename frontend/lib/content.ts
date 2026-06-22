@@ -62,10 +62,10 @@ export const SITE = {
   network: "Arc by Circle",
 } as const;
 
-const REPO_URL = "https://github.com/Enoch208/Dirac";
+const REPO_URL = "https://github.com/Cyberpunk738/Lepton-duel";
 const ARC_DOCS_URL = "https://docs.circle.com/circle-research/arc";
 const CIRCLE_URL = "https://www.circle.com";
-export const CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000"; // TODO: replace after deploy
+export const CONTRACT_ADDRESS = "0x72e832B7053D8178F710E6CB7F1EA5C337C048e0"; // TODO: replace after deploy
 
 export const PRIMARY_CTA: CallToAction = {
   label: "Enter the arena",

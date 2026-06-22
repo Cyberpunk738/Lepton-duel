@@ -13,7 +13,7 @@ const OUTCOME_TONE: Record<DuelResult["outcome"], string> = {
   Draw: "text-muted",
 };
 const OUTCOME_VERB: Record<DuelResult["outcome"], string> = { Win: "won", Loss: "lost", Draw: "drew" };
-const SKILLS_URL = "https://github.com/Enoch208/Dirac/tree/main/contracts";
+const SKILLS_URL = "https://github.com/Cyberpunk738/Lepton-duel/tree/main/contracts";
 
 export function DemoDuel() {
   const [state, setState] = useState<DuelState>(createDuel);
