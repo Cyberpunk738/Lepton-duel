@@ -16,7 +16,14 @@ export const ARENA_ABI = [
   "function getLeaderboard(uint256 topN) external view returns (tuple(address player, int32 rating)[])",
   "function getPlayer(address who) external view returns (int32 rating, uint32 games, uint32 wins, uint32 losses, uint32 draws, uint32[3] memory moveCounts, bool initialized)",
   "function play(uint8 playerMove) external returns (tuple(uint8 playerMove, uint8 houseMove, uint8 outcome, int32 newRating))",
-  "event MatchPlayed(uint256 indexed matchId, address indexed player, uint8 playerMove, uint8 houseMove, uint8 outcome, int32 newRating)"
+  "function challenge(address opponent, bytes32 commit, uint256 stakeAmount) external returns (uint256)",
+  "function acceptChallenge(uint256 matchId, bytes32 commit) external",
+  "function reveal(uint256 matchId, uint8 playerMove, bytes32 salt) external",
+  "function getMatch(uint256 matchId) external view returns (address challenger, address opponent, uint256 stakeAmount, uint32 deadlineBlock, uint8 state, bool challengerRevealed, bool opponentRevealed)",
+  "event MatchPlayed(uint256 indexed matchId, address indexed player, uint8 playerMove, uint8 houseMove, uint8 outcome, int32 newRating)",
+  "event ChallengeOpened(uint256 indexed matchId, address indexed challenger, address indexed opponent, uint256 stakeUsdc, uint32 deadlineBlock)",
+  "event ChallengeAccepted(uint256 indexed matchId, uint32 deadlineBlock)",
+  "event PvpResolved(uint256 indexed matchId, address winner, uint8 challengerMove, uint8 opponentMove, uint256 payout)"
 ];
 
 // ABI for the ERC20 USDC token interface
@@ -274,6 +281,124 @@ function useWeb3WalletInternal() {
     }
   };
 
+  const challengeOnChain = async (opponent: string, move: number, stakeAmount: string): Promise<{
+    success: boolean;
+    matchId?: string;
+    salt?: string;
+    commit?: string;
+    txHash?: string;
+    error?: string;
+  }> => {
+    setError("");
+    if (!window.ethereum || !isConnected || !address) {
+      return { success: false, error: "Wallet not connected" };
+    }
+    setLoading(true);
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum as any);
+      const signer = await provider.getSigner();
+      
+      // 1. Approve USDC if needed
+      const usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer);
+      const rawStake = ethers.parseUnits(stakeAmount, 6);
+      const allowance = await usdcContract.allowance(address, CONTRACT_ADDRESS);
+      
+      if (allowance < rawStake) {
+        const approveTx = await usdcContract.approve(CONTRACT_ADDRESS, ethers.MaxUint256);
+        await approveTx.wait();
+      }
+
+      // 2. Compute commit
+      const saltBytes = ethers.randomBytes(32);
+      const salt = ethers.hexlify(saltBytes);
+      const commit = ethers.solidityPackedKeccak256(["uint8", "bytes32"], [move, salt]);
+
+      // 3. Send Challenge
+      const arenaContract = new ethers.Contract(CONTRACT_ADDRESS, ARENA_ABI, signer);
+      const tx = await arenaContract.challenge(opponent, commit, rawStake);
+      const receipt = await tx.wait();
+
+      // Find matchId from event log
+      const iface = new ethers.Interface(ARENA_ABI);
+      let matchId = "";
+      for (const log of receipt.logs) {
+        try {
+          const parsed = iface.parseLog({ topics: [...log.topics], data: log.data });
+          if (parsed && parsed.name === "ChallengeOpened") {
+            matchId = parsed.args.matchId.toString();
+            break;
+          }
+        } catch (e) {
+          // Ignored
+        }
+      }
+
+      if (!matchId) {
+        throw new Error("ChallengeOpened event not found in receipt");
+      }
+
+      // Store in localStorage
+      localStorage.setItem(`lepton_pvp_match_${matchId}`, JSON.stringify({
+        opponent,
+        move,
+        salt,
+        stakeAmount,
+        txHash: tx.hash
+      }));
+
+      await fetchUserData(address);
+
+      return {
+        success: true,
+        matchId,
+        salt,
+        commit,
+        txHash: tx.hash
+      };
+    } catch (err: any) {
+      console.error("On-chain PvP challenge failed:", err);
+      const msg = err.reason || err.message || "Transaction failed";
+      setError(msg);
+      return { success: false, error: msg };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const revealOnChain = async (matchId: string, move: number, salt: string): Promise<{
+    success: boolean;
+    txHash?: string;
+    error?: string;
+  }> => {
+    setError("");
+    if (!window.ethereum || !isConnected || !address) {
+      return { success: false, error: "Wallet not connected" };
+    }
+    setLoading(true);
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum as any);
+      const signer = await provider.getSigner();
+      const arenaContract = new ethers.Contract(CONTRACT_ADDRESS, ARENA_ABI, signer);
+
+      const tx = await arenaContract.reveal(matchId, move, salt);
+      await tx.wait();
+
+      await fetchUserData(address);
+
+      return {
+        success: true,
+        txHash: tx.hash
+      };
+    } catch (err: any) {
+      console.error("On-chain PvP reveal failed:", err);
+      const msg = err.reason || err.message || "Transaction failed";
+      setError(msg);
+      return { success: false, error: msg };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (window.ethereum) {
       window.ethereum.on("accountsChanged", (accounts: string[]) => {
@@ -305,6 +430,8 @@ function useWeb3WalletInternal() {
     error,
     connect,
     playOnChain,
+    challengeOnChain,
+    revealOnChain,
     refresh: () => address && fetchUserData(address)
   };
 }

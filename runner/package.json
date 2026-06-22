@@ -8,7 +8,8 @@
     "typecheck": "tsc --noEmit",
     "start": "tsx src/index.ts",
     "start:evm": "tsx src/evm-index.ts",
-    "start:agent": "tsx src/agent.ts"
+    "start:agent": "tsx src/agent.ts",
+    "challenge:agent": "tsx src/test-challenge.ts"
   },
   "devDependencies": {
     "@types/node": "^22.19.19",

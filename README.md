@@ -4,29 +4,29 @@
 ![USDC Native](https://img.shields.io/badge/USDC-Native-111111?style=flat-square&labelColor=111111&color=22d3ee)
 ![Lepton Hackathon](https://img.shields.io/badge/Lepton-Agents_Hackathon-111111?style=flat-square&labelColor=111111&color=22d3ee)
 
-**Lepton Duel is a Rock–Paper–Scissors arena on [Arc](https://docs.circle.com/circle-research/arc) (Circle's L1) where autonomous agents duel an _adaptive house_ for on-chain Elo rank, pay nanopayments to enter/challenge, earn USDC, and climb an Elo leaderboard.** One transaction enters you into the ladder. The house learns your patterns and plays the counter — so spamming gets you nowhere and only genuine strategy climbs. Every duel is a verifiable on-chain transaction, every result emits rich events, and the leaderboard is the show.
+**Lepton Duel is a Rock–Paper–Scissors arena on [Arc](https://docs.circle.com/circle-research/arc) (Circle's L1) where autonomous agents duel an _adaptive house_ for on-chain Elo rank, pay nanopayments to enter/challenge, earn USDC, and climb an Elo leaderboard.** It also supports fully decentralized **staked PvP duels** between two agents or an agent and a human player using a secure commit-reveal scheme.
 
 - **Network:** Arc by Circle · Sub-second finality · Native USDC
 - **Smart Contract (Arc Testnet):** [`0x72e832B7053D8178F710E6CB7F1EA5C337C048e0`](https://testnet.arcscan.app/address/0x72e832B7053D8178F710E6CB7F1EA5C337C048e0)
+- **USDC Token Address (Arc Testnet):** [`0x3600000000000000000000000000000000000000`](https://testnet.arcscan.app/address/0x3600000000000000000000000000000000000000)
 - **Stack:** Solidity + Foundry (on-chain) · Node 20 + TypeScript (agent runner) · Next.js (arena)
-- **Play in one transaction** — see [Contracts README](contracts/README.md).
 
 ---
 
 ## 🏛️ Architecture
 
 ```mermaid
-flowchart LR
-    A["Autonomous agents"] -- "play(move) · one tx" --> P
+flowchart TD
+    A["Autonomous Player (CLI / Browser)"] -- "challenge() / reveal() · PvP" --> P
+    B["Autonomous House Agent (runner)"] -- "acceptChallenge() / reveal()" --> P
     subgraph chain["Arc (Circle L1)"]
       P["LeptonArena.sol<br/>Solidity smart contract"]
       P -- "emits" --> E[("Events<br/>MatchPlayed · PvpResolved · NewChampion")]
     end
     P -. "native USDC stakes" .-> U["USDC (ERC-20)"]
-    E --> R["Off-chain runner"]
-    R -- "shoutouts · standings" --> CB["Network Chat & Board"]
-    F["Next.js arena<br/>live leaderboard"] -- "reads state" --> P
-    A -. "discover" .- CB
+    E --> R["Off-chain Event Broadcaster"]
+    R -- "announcements · standings" --> Term["Logger Terminal"]
+    F["Next.js Web Arena<br/>live leaderboard"] -- "reads state" --> P
 ```
 
 Three cleanly separated parts:
@@ -34,54 +34,32 @@ Three cleanly separated parts:
 | Part | Tech | Role |
 |---|---|---|
 | **Smart contract** (`contracts/`) | Solidity 0.8.26 + Foundry | The game: resolves duels, maintains Elo + leaderboard, escrows staked PvP, emits events. |
-| **Agent runner** (`runner/`) | Node + TypeScript | Autonomous off-chain agent: subscribes to events, broadcasts results, manages mentions. |
-| **Arena** (`frontend/`) | Next.js | Public live link — leaderboard, match feed, demo duel, and how-to-play. |
+| **Agent runner** (`runner/`) | Node + TypeScript | Autonomous off-chain agent: listens for challenges, auto-accepts, auto-reveals, and broadcasts match results. |
+| **Arena** (`frontend/`) | Next.js | Public live link — leaderboard, match feed, sandbox, house duels, and agent PvP arena. |
 
 ---
 
-## ⚙️ The smart contract
+## ⚙️ Smart Contract Interface (`LeptonArena.sol`)
 
-One Solidity contract, clean ABI that agents can call directly.
+One Solidity contract, clean ABI that agents can call directly. Deployed at `0x72e832B7053D8178F710E6CB7F1EA5C337C048e0`.
 
 ### Core Functions
 | Method | Kind | Purpose |
 |---|---|---|
-| `play(uint8 move)` | write | Duel the adaptive house — resolve, update Elo, emit `MatchPlayed`. |
-| `challenge(opponent, commit, stakeAmount)` | write | Open a staked agent-vs-agent duel. |
-| `acceptChallenge(matchId, commit)` | write | Accept and escrow the matching USDC stake. |
-| `reveal(matchId, move, salt)` | write | Reveal a committed move; settles when both are in. |
-| `claimTimeout(matchId)` | write | Resolve a stalled duel (forfeit or refund). |
-| `getLeaderboard(topN)` / `getPlayer(addr)` / `getMatch(matchId)` / `getPot()` | view | Gas-free reads for the arena. |
-
-### Admin Functions
-Owner-gated: `setConfig`, `pause`/`unpause`, `seedPot`, `withdrawPot`.
+| `play(uint8 move)` | Write | Duel the adaptive house — resolves immediately, updates Elo, emits `MatchPlayed`. |
+| `challenge(opponent, commit, stakeAmount)` | Write | Open a staked agent-vs-agent or player-vs-agent duel. |
+| `acceptChallenge(matchId, commit)` | Write | Accept a PvP challenge and escrow matching USDC stakes. |
+| `reveal(matchId, move, salt)` | Write | Reveal committed move. Settles when both players have revealed. |
+| `claimTimeout(matchId)` | Write | Settle a stalled duel due to opponent forfeit or timeout. |
+| `getLeaderboard(topN)` / `getPlayer(addr)` / `getMatch(matchId)` / `getPot()` | View | Gas-free reads for the arena and agents. |
 
 ---
 
-## 🧮 Engineering
+## 🚀 Quickstart & Setup
 
-All math is **integer-only and deterministic**:
+Ensure you have [Node.js (v20+)](https://nodejs.org/) installed.
 
-- **Elo** computed from a fixed-point expected-score lookup table with integer interpolation — no floats. Gains shrink as you out-rank the house (anti-farm).
-- **Adaptive house** blends long-run move frequency with recency weighting, then applies a bounded ε-randomness term — all integer math over a per-player ring buffer.
-- **Commit-reveal** binds `keccak256(abi.encodePacked(uint8(move), salt))`; reveals verified against stored commit.
-- **Security**: ReentrancyGuard, Ownable, Pausable, SafeERC20, checked arithmetic (Solidity 0.8+).
-
----
-
-## 🤖 The agent runner
-
-The runner watches the contract's events and turns every match into network presence:
-
-- **Auto-shoutouts:** every result broadcast to network, tagging duelists.
-- **Champion + standings:** rank-one changes published.
-- **Resilient by design:** retried defensively, only fires in reaction to real on-chain events.
-
----
-
-## 🚀 Quickstart
-
-### Smart Contract
+### 1. Smart Contract (Foundry)
 
 ```bash
 cd contracts
@@ -92,18 +70,22 @@ forge test -vvv
 
 See [contracts/README.md](contracts/README.md) for full deployment guide.
 
-### Arena (Frontend)
+### 2. Arena (Frontend Web App)
 
 The Next.js frontend has been upgraded with full Web3 capability:
-- **Zero-Wallet Read:** Automatically queries and renders the live prize pot size and Elo leaderboard directly from the Arc Testnet using a public RPC.
-- **On-Chain Play:** Connect your browser wallet (MetaMask, Coinbase, etc.) to view your USDC balance, rating, and sign transactions to duel on-chain.
-- **Sandbox Simulation:** Switch to the local sandbox tab to test moves and house predictability in a zero-gas simulator.
+*   **Zero-Wallet Reads:** Automatically queries and renders the live prize pot size and Elo leaderboard directly from the Arc Testnet using a public RPC.
+*   **Arc On-Chain House Duels:** Connect your browser wallet (MetaMask, Coinbase, etc.) to view your USDC balance, rating, and sign transactions to duel the house.
+*   **Challenge Agent (PvP) Card:** Enter the agent's wallet address, specify a USDC stake, choose your move, and challenge an autonomous agent. The UI handles USDC approvals, commits, and automatically reveals your move via state caching when the opponent accepts.
+*   **Sandbox Simulation:** Switch to the local sandbox tab to test moves and house predictability in a zero-gas simulator.
 
 ```bash
-cd frontend && npm install && npm run dev
+cd frontend
+npm install
+npm run dev
 ```
+Navigate to `http://localhost:3000` to play.
 
-### Agent Runner (EVM - Arc Testnet)
+### 3. Agent Runner & Broadcaster
 
 Watches on-chain events (`MatchPlayed`, `NewChampion`, `PvpResolved`) on the Arc Testnet contract and formats styled announcements.
 
@@ -113,38 +95,50 @@ npm install
 npm run start:evm
 ```
 
-### Autonomous PvP Agent (EVM - Arc Testnet)
+### 4. Autonomous PvP Agent
 
-Listens for incoming PvP challenges targeting its address, automatically chooses a move, signs the accept transaction with its locked stake, and auto-reveals to claim payouts.
+Listens for incoming PvP challenges targeting its address, automatically chooses a random move, signs the accept transaction with its locked stake, and auto-reveals to claim payouts.
 
 ```bash
 cd runner
-npm install
 npm run start:agent
 ```
+*Note: Make sure your `PRIVATE_KEY` inside `runner/.env` is configured with some testnet gas (USDC) to cover stakes and transaction fees.*
 
-### Agent Runner (Vara Network)
+### 5. CLI PvP Challenger Client
 
-Watches sails events and broadcasts coordinate announcements.
+You can run an automated staked PvP match against the agent directly from the command line using your second player key:
 
 ```bash
 cd runner
-npm install
-npm start
+npm run challenge:agent
+```
+*   **Options:** You can specify your move as a parameter: `npm run challenge:agent 1` (0 = Rock, 1 = Paper, 2 = Scissors). If not specified, a random move is chosen.
+*   **Flow:** The script automatically verifies USDC allowance, approves the contract, creates the challenge on-chain, polls for the agent's acceptance, reveals your move, and prints the resolved winner and payout.
+
+---
+
+## 🛠️ Configuration & Env Setup
+
+Create a `.env` file in the `runner/` directory:
+
+```env
+RPC_URL=https://rpc.testnet.arc.network
+CONTRACT_ADDRESS=0x72e832B7053D8178F710E6CB7F1EA5C337C048e0
+PRIVATE_KEY=0x... # The Private Key of the Agent Wallet
+CHALLENGER_PRIVATE_KEY=0x... # The Private Key of the Challenger Player Wallet
 ```
 
 ---
 
-## 📂 Repository layout
+## 💡 Troubleshooting & Technical Notes
 
-```
-contracts/        Solidity smart contract + Foundry tests + deploy script
-runner/           Off-chain agent — events → broadcast (Node + TS)
-frontend/         Next.js arena (the live link)
-```
+### USDC Decimals
+*   **Native gas:** On Arc L1, native gas uses USDC with **18 decimals**.
+*   **USDC ERC-20 token:** The ERC-20 contract (`0x3600000000000000000000000000000000000000`) uses **6 decimals**. The frontend and runner parse balances accordingly.
 
----
+### Ethers.js v6 Checksum Address Enforcements
+Ethers v6 strictly validates address capitalization checksums if a string contains mixed uppercase/lowercase characters. If you get a `bad address checksum` error, ensure you lowercase the address before querying or wrapping it in `ethers.getAddress(address.toLowerCase())`.
 
-*Lepton Duel — out-think the house. Take the crown. Built on Arc.*
-
-<sub>An agent battle arena for the Lepton Agents Hackathon. #LeptonAgents #Arc #Circle</sub>
+### Fragile RPC Event Filters
+Arc Testnet public RPC endpoints can aggressively clean up event filters, causing `eth_getFilterChanges` to throw `filter not found` or `request timeout` errors during long `contract.on` listeners. To prevent this, both our **Frontend PvP UI** and **CLI Challenger Client** fallback to robust **direct state polling** of `getMatch(matchId)` every 4 seconds.
