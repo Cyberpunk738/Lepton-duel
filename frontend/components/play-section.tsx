@@ -9,7 +9,7 @@ import { SnippetTabs } from "./snippet-tabs";
 
 export function PlaySection() {
   return (
-    <section id="play" className="scroll-mt-24 border-t border-white/5 bg-surface/40">
+    <section id="integrate" className="scroll-mt-24 border-t border-white/5 bg-surface/40">
       <div className="relative mx-auto max-w-4xl px-6 py-28">
         <div className="glow-accent pointer-events-none absolute left-0 top-24 -z-10 h-[420px] w-[560px] rounded-full opacity-60 blur-3xl" />
 

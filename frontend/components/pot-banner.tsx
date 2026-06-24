@@ -13,13 +13,13 @@ export function PotBanner() {
   useEffect(() => {
     // Initial fetch
     fetchOnChainPot().then((amount) => {
-      setLivePot(amount);
+      setLivePot(amount > 0 ? amount : 100);
     });
 
     // Refresh every 15 seconds
     const interval = setInterval(() => {
       fetchOnChainPot().then((amount) => {
-        setLivePot(amount);
+        setLivePot(amount > 0 ? amount : 100);
       });
     }, 15000);
 

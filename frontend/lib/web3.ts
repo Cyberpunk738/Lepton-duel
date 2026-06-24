@@ -60,6 +60,17 @@ export interface OnChainLeaderboardEntry {
   delta: string;
 }
 
+export interface FullLeaderboardEntry {
+  rank: number;
+  address: string;
+  fullAddress: string;
+  rating: number;
+  games: number;
+  wins: number;
+  losses: number;
+  draws: number;
+}
+
 export async function fetchOnChainLeaderboard(topN = 5): Promise<OnChainLeaderboardEntry[]> {
   try {
     const provider = getReadProvider();
@@ -79,6 +90,88 @@ export async function fetchOnChainLeaderboard(topN = 5): Promise<OnChainLeaderbo
   } catch (error) {
     console.error("Failed to fetch on-chain leaderboard:", error);
     return [];
+  }
+}
+
+export async function fetchFullLeaderboard(topN = 25): Promise<FullLeaderboardEntry[]> {
+  try {
+    const provider = getReadProvider();
+    const contract = new ethers.Contract(CONTRACT_ADDRESS, ARENA_ABI, provider);
+    const rawLeaderboard = await contract.getLeaderboard(topN);
+
+    // Fetch player stats in parallel for each leaderboard entry
+    const entries: FullLeaderboardEntry[] = await Promise.all(
+      rawLeaderboard.map(async (entry: any, index: number) => {
+        const playerAddress = entry.player;
+        const shortAddress = playerAddress.slice(0, 6) + "…" + playerAddress.slice(-4);
+        try {
+          const playerRecord = await contract.getPlayer(playerAddress);
+          return {
+            rank: index + 1,
+            address: shortAddress,
+            fullAddress: playerAddress,
+            rating: Number(entry.rating),
+            games: Number(playerRecord.games),
+            wins: Number(playerRecord.wins),
+            losses: Number(playerRecord.losses),
+            draws: Number(playerRecord.draws),
+          };
+        } catch {
+          return {
+            rank: index + 1,
+            address: shortAddress,
+            fullAddress: playerAddress,
+            rating: Number(entry.rating),
+            games: 0,
+            wins: 0,
+            losses: 0,
+            draws: 0,
+          };
+        }
+      })
+    );
+
+    return entries;
+  } catch (error) {
+    console.error("Failed to fetch full leaderboard:", error);
+    return [];
+  }
+}
+
+export async function fetchPlayerStats(address: string): Promise<PlayerStats | null> {
+  try {
+    const provider = getReadProvider();
+    const contract = new ethers.Contract(CONTRACT_ADDRESS, ARENA_ABI, provider);
+    const playerRecord = await contract.getPlayer(address);
+
+    if (!playerRecord.initialized) {
+      return {
+        rating: 1500,
+        games: 0,
+        wins: 0,
+        losses: 0,
+        draws: 0,
+        moveCounts: [0, 0, 0],
+        initialized: false,
+      };
+    }
+
+    return {
+      rating: Number(playerRecord.rating),
+      games: Number(playerRecord.games),
+      wins: Number(playerRecord.wins),
+      losses: Number(playerRecord.losses),
+      draws: Number(playerRecord.draws),
+      moveCounts: [
+        Number(playerRecord.moveCounts[0]),
+        Number(playerRecord.moveCounts[1]),
+        Number(playerRecord.moveCounts[2]),
+      ],
+      initialized: true,
+    };
+  } catch (error) {
+    console.error("Failed to fetch player stats:", error);
+    return null;
   }
 }
 

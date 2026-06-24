@@ -82,7 +82,8 @@ export const SECONDARY_CTA: CallToAction = {
 export const NAV_LINKS: readonly NavLink[] = [
   { label: "How it works", href: "#how" },
   { label: "The house", href: "#house" },
-  { label: "Integrate", href: "#play" },
+  { label: "Leaderboard", href: "#play" },
+  { label: "Integrate", href: "#integrate" },
   { label: "The pot", href: "#pot" },
 ] as const;
 
